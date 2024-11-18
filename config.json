@@ -1,0 +1,7 @@
+{
+    "algorithm":"rk4",
+    "datatype":"float",
+    "step":0.2,
+    "x0":1,
+    "y0":0
+}
