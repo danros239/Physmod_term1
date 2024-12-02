@@ -1,7 +1,12 @@
 {
     "algorithm":"rk4",
     "datatype":"float",
+    "f":1,
+    "friction":1.0,
+    "name":"periodic_force",
+    "omega":0.05,
+    "omega_0":0.75,
     "step":0.2,
-    "x0":1,
+    "x0":5,
     "y0":0
 }
