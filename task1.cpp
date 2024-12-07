@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
     MP_Friction<float> force(data["omega"], data["friction"]);
     MP_Periodic_Force<float> force_p(data["omega_0"], data["omega"], data["f"], data["friction"]);
 
-    SingleState<float> basic_pendulum(data["x0"], data["y0"]);
+    DoubleState<float> basic_pendulum(data["x0"], data["y0"]);
 
 
     Abstract_Solver<float, MP_Periodic_Force> as;
@@ -65,6 +65,6 @@ int main(int argc, char* argv[])
 
     std::string filename = "data/" + alg_type + "_" + func_type + ".csv";
 
-    run_test<float, MP_Periodic_Force, SingleState> (as, basic_pendulum, force_p, filename, data["step"], 1000, as.type);
+    run_test<float, MP_Periodic_Force, DoubleState> (as, basic_pendulum, force_p, filename, data["step"], 1000, as.type);
     
 }

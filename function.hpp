@@ -3,42 +3,42 @@
 #include <vector>
 #pragma once
 
-// template<typename T>
-// class State
-// {
-//     public:
-//     virtual State operator+ (State other);
-//     virtual State operator* (T coeff);
-// };
+template<typename T>
+class State
+{
+    // public:
+    // virtual State operator+ (State other);
+    // virtual State operator* (T coeff);
+};
 
 template <typename T>
-class SingleState // : public State<T>
+class DoubleState : public State<T>
 {
     public:
     T x, v, t;
-    SingleState(T x0, T v0): x(x0), v(v0), t(0) { };
-    SingleState(T x0, T v0, T t0): x(x0), v(v0), t(t0) { };
-    SingleState(): x(0), v(0), t(0) { };
+    DoubleState(T x0, T v0): x(x0), v(v0), t(0) { };
+    DoubleState(T x0, T v0, T t0): x(x0), v(v0), t(t0) { };
+    DoubleState(): x(0), v(0), t(0) { };
 
-    SingleState operator+ (SingleState other)
+    DoubleState operator+ (DoubleState other)
     {
-        SingleState res = *this;
+        DoubleState res = *this;
         res.x += other.x;
         res.v += other.v;
         return res;
     }
 
-    SingleState operator* (T coeff)
+    DoubleState operator* (T coeff)
     {
-        SingleState res;
+        DoubleState res;
         res.x = x * coeff;
         res.v = v * coeff;
         return res;
     }
 
-    SingleState ts(T dt) // returns state shifted in time by dt
+    DoubleState ts(T dt) // returns state shifted in time by dt
     {
-        SingleState other = *this;
+        DoubleState other = *this;
         other.t += dt;
         return other;
     }
@@ -53,19 +53,31 @@ class SingleState // : public State<T>
     }
 };
 
-// template<typename T>
-// class NState
-// {
-//     public:
-//     const size_t n; // number of coordinates
+template<typename T>
+class NState // state of a system with N coordinates
+{
+    public:
+    const size_t n; // number of coordinates
 
-//     std::vector<T> x, v;
+    std::vector<T> x; // a vector of position coordinates
+    T t;
     
-//     NState(size_t dim, std::vector x0, std::vector v_0, T t0): n(dim), x(x0), v(v0), t(t0)
-//     {
+    NState(size_t dim, std::vector<T> x_0, T t_0): n(dim), x(x_0), t(t_0){ };
 
-//     }
-// };
+    NState operator+(NState other)
+    {
+        NState res = *this;
+        res.x += other.x;
+        return res;
+    }
+
+    NState operator*(T coeff)
+    {
+        NState res = *this;
+        res.x *= coeff;
+        return res;
+    }
+};
 
 enum algos
 {
@@ -79,24 +91,24 @@ class Abstract_Solver
 {
     public:
     algos type;
-    void euler_solve(SingleState<T>& state, Function<T> foo, T dt)
+    void euler_solve(DoubleState<T>& state, Function<T> foo, T dt)
     {
-        SingleState<T> delta = foo(state)*dt;
+        DoubleState<T> delta = foo(state)*dt;
         state = state + delta;
         state.t += dt;
     }
 
-    void heun_solve(SingleState<T>& state, Function<T> foo, T dt)
+    void heun_solve(DoubleState<T>& state, Function<T> foo, T dt)
     {
-        SingleState<T> k1 = foo(state)*dt*(T)0.5;
-        SingleState<T> k2 = foo(state.ts(dt*(T)0.5) + k1);
+        DoubleState<T> k1 = foo(state)*dt*(T)0.5;
+        DoubleState<T> k2 = foo(state.ts(dt*(T)0.5) + k1);
         state = state + k2*(T)dt;
         state.t += dt;
     }
 
-    void rk_solve(SingleState<T>& state, Function<T> foo, T dt)
+    void rk_solve(DoubleState<T>& state, Function<T> foo, T dt)
     {
-        SingleState<T> k1(0,0,state.t), k2(0,0,state.t + 0.5*dt), k3(0,0,state.t + 0.5*dt), k4(0,0,state.t*dt);
+        DoubleState<T> k1(0,0,state.t), k2(0,0,state.t + 0.5*dt), k3(0,0,state.t + 0.5*dt), k4(0,0,state.t*dt);
         k1 = foo(state);
         k2 = foo(state.ts(dt*(T)0.5) + k1*dt*static_cast<T>(0.5));
         k3 = foo(state.ts(dt*(T)0.5) + k2*dt*static_cast<T>(0.5));
@@ -104,7 +116,7 @@ class Abstract_Solver
         state = state + (k1*(T)(1/(T)6) + k2*(T)(1/(T)3) + k3*(T)(1/(T)3) + k4*(T)(1/(T)6))*dt;
         state.t += dt;
     }
-    T total_energy(SingleState<T> state)
+    T total_energy(DoubleState<T> state)
     {
 
     }
@@ -123,11 +135,21 @@ class MPendulum // : public Function<T>
 {
     public:
     T w;
-    SingleState<T> operator()(SingleState<T> state)
+    const size_t dim = 2;
+    // DoubleState<T> operator()(DoubleState<T> state)
+    // {
+    //     DoubleState<T> newstate;
+    //     newstate.v = -state.x*w*w;
+    //     newstate.x = state.v;
+    //     newstate.t = state.t;
+    //     return newstate;
+    // }
+
+    NState<T> operator()(NState<T> state) // calculates time derivative of a state
     {
-        SingleState<T> newstate;
-        newstate.v = -state.x*w*w;
-        newstate.x = state.v;
+        NState<T> newstate;
+        newstate.x[1] = -state.x[0]*w*w;
+        newstate.x[0] = state.x[1];
         newstate.t = state.t;
         return newstate;
     }
@@ -141,9 +163,9 @@ class MP_Friction
     public:
     T w;
     T alpha;
-    SingleState<T> operator()(SingleState<T> state)
+    DoubleState<T> operator()(DoubleState<T> state)
     {
-        SingleState<T> newstate;
+        DoubleState<T> newstate;
         newstate.v = -state.x*w*w - state.v * alpha;
         newstate.x = state.v;
         newstate.t = state.t;
@@ -159,9 +181,9 @@ class MP_Periodic_Force
     T w0;
     T alpha;
     T f, w;
-    SingleState<T> operator()(SingleState<T> state)
+    DoubleState<T> operator()(DoubleState<T> state)
     {
-        SingleState<T> newstate;
+        DoubleState<T> newstate;
         newstate.v = -state.x*w0*w0 - state.v * alpha + f*cos(w*state.t);
         newstate.x = state.v;
         newstate.t = state.t;
@@ -177,4 +199,13 @@ class Double_Pendulum
     T m1, m2;
     T g;
 
+};
+
+template <typename T, template <typename F_T> class Function>
+class Algebraic_Solver
+{
+    T newton_solve()
+    {
+
+    }
 };
