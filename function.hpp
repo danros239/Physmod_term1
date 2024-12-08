@@ -53,29 +53,44 @@ class DoubleState : public State<T>
     }
 };
 
-template<typename T>
-class NState // state of a system with N coordinates
+template <typename T> class NState
 {
     public:
-    const size_t n; // number of coordinates
 
+    size_t n;
     std::vector<T> x; // a vector of position coordinates
     T t;
     
-    NState(size_t dim, std::vector<T> x_0, T t_0): n(dim), x(x_0), t(t_0){ };
+    NState(size_t dim, std::vector<T> x_0, T t_0): n(dim), x(x_0), t(t_0)
+    {
+        x.resize(n);
+    };
+
+    NState(size_t dim): n(dim) 
+    { 
+        x.resize(n);
+    };
 
     NState operator+(NState other)
     {
         NState res = *this;
-        res.x += other.x;
+        for(int i=0; i<n; i++)
+            res.x[i] += other.x[i];
         return res;
     }
-
     NState operator*(T coeff)
     {
         NState res = *this;
-        res.x *= coeff;
+        for(int i=0; i<n; i++)
+            res.x[i] *= coeff;
         return res;
+    }
+
+    NState ts(T timeshift)
+    {
+        NState other = *this;
+        other.t += timeshift;
+        return other;
     }
 };
 
@@ -91,34 +106,31 @@ class Abstract_Solver
 {
     public:
     algos type;
-    void euler_solve(DoubleState<T>& state, Function<T> foo, T dt)
+    void euler_solve(NState<T>& state, Function<T> foo, T dt)
     {
-        DoubleState<T> delta = foo(state)*dt;
+        NState<T> delta = foo(state)*dt;
         state = state + delta;
         state.t += dt;
     }
 
-    void heun_solve(DoubleState<T>& state, Function<T> foo, T dt)
+    void heun_solve(NState<T>& state, Function<T> foo, T dt)
     {
-        DoubleState<T> k1 = foo(state)*dt*(T)0.5;
-        DoubleState<T> k2 = foo(state.ts(dt*(T)0.5) + k1);
+        NState<T> k1 = foo(state)*dt*(T)0.5;
+        NState<T> k2 = foo(state.ts(dt*(T)0.5) + k1);
         state = state + k2*(T)dt;
         state.t += dt;
     }
 
-    void rk_solve(DoubleState<T>& state, Function<T> foo, T dt)
+    void rk_solve(NState<T>& state, Function<T> foo, T dt)
     {
-        DoubleState<T> k1(0,0,state.t), k2(0,0,state.t + 0.5*dt), k3(0,0,state.t + 0.5*dt), k4(0,0,state.t*dt);
+        std::vector<T> tmp{0.0, 0.0};
+        NState<T> k1(2,tmp,state.t), k2(2,tmp,state.t + 0.5*dt), k3(2,tmp,state.t + 0.5*dt), k4(2,tmp,state.t*dt);
         k1 = foo(state);
         k2 = foo(state.ts(dt*(T)0.5) + k1*dt*static_cast<T>(0.5));
         k3 = foo(state.ts(dt*(T)0.5) + k2*dt*static_cast<T>(0.5));
         k4 = foo(state.ts(dt) + k3*dt);
         state = state + (k1*(T)(1/(T)6) + k2*(T)(1/(T)3) + k3*(T)(1/(T)3) + k4*(T)(1/(T)6))*dt;
         state.t += dt;
-    }
-    T total_energy(DoubleState<T> state)
-    {
-
     }
 
     Abstract_Solver() { };
@@ -136,7 +148,7 @@ class MPendulum // : public Function<T>
     public:
     T w;
     const size_t dim = 2;
-    // DoubleState<T> operator()(DoubleState<T> state)
+    // NState<T> operator()(DoubleState<T> state)
     // {
     //     DoubleState<T> newstate;
     //     newstate.v = -state.x*w*w;
@@ -147,7 +159,7 @@ class MPendulum // : public Function<T>
 
     NState<T> operator()(NState<T> state) // calculates time derivative of a state
     {
-        NState<T> newstate;
+        NState<T> newstate(2);
         newstate.x[1] = -state.x[0]*w*w;
         newstate.x[0] = state.x[1];
         newstate.t = state.t;
@@ -163,11 +175,11 @@ class MP_Friction
     public:
     T w;
     T alpha;
-    DoubleState<T> operator()(DoubleState<T> state)
+    NState<T> operator()(NState<T> state)
     {
-        DoubleState<T> newstate;
-        newstate.v = -state.x*w*w - state.v * alpha;
-        newstate.x = state.v;
+        NState<T> newstate(2);
+        newstate.x[1] = -state.x[0]*w*w - state.x[1] * alpha;
+        newstate.x[0] = state.x[1];
         newstate.t = state.t;
         return newstate;
     }
@@ -181,11 +193,11 @@ class MP_Periodic_Force
     T w0;
     T alpha;
     T f, w;
-    DoubleState<T> operator()(DoubleState<T> state)
+    NState<T> operator()(NState<T> state)
     {
-        DoubleState<T> newstate;
-        newstate.v = -state.x*w0*w0 - state.v * alpha + f*cos(w*state.t);
-        newstate.x = state.v;
+        NState<T> newstate(2);
+        newstate.x[1] = -state.x[0]*w0*w0 - state.x[1] * alpha + f*cos(w*state.t);
+        newstate.x[0] = state.x[1];
         newstate.t = state.t;
         return newstate;
     }

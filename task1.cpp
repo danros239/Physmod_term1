@@ -12,7 +12,7 @@ void run_test(Abstract_Solver<T, Func> s, State<T> &p, Func<T> &foo,
     int algo)
 {
     std::ofstream out(filename);
-    out << "t x v E" << std::endl;
+    out << "t x v" << std::endl;
     for(int i=0; i<1000; i++)
     {
         switch (s.type)
@@ -33,7 +33,7 @@ void run_test(Abstract_Solver<T, Func> s, State<T> &p, Func<T> &foo,
             break;
         
         }
-        out << " " << p.t << " " << p.x << " " << p.v << " " << p.energy() << std::endl;
+        out << " " << p.t << " " << p.x[0] << " " << p.x[1] << std::endl;
     }
 }
 
@@ -50,7 +50,8 @@ int main(int argc, char* argv[])
     MP_Friction<float> force(data["omega"], data["friction"]);
     MP_Periodic_Force<float> force_p(data["omega_0"], data["omega"], data["f"], data["friction"]);
 
-    DoubleState<float> basic_pendulum(data["x0"], data["y0"]);
+    std::vector<float> state = {data["x0"], data["y0"]};
+    NState<float> basic_pendulum(2, state, 0);
 
 
     Abstract_Solver<float, MP_Periodic_Force> as;
@@ -65,6 +66,6 @@ int main(int argc, char* argv[])
 
     std::string filename = "data/" + alg_type + "_" + func_type + ".csv";
 
-    run_test<float, MP_Periodic_Force, DoubleState> (as, basic_pendulum, force_p, filename, data["step"], 1000, as.type);
+    run_test<float, MP_Periodic_Force, NState> (as, basic_pendulum, force_p, filename, data["step"], 1000, as.type);
     
 }
